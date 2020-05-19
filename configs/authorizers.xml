@@ -47,7 +47,7 @@
         <property name="Users File">./conf/users.xml</property>
         <property name="Legacy Authorized Users File"></property>
 {{- range $i := until $replicas }}
-        <property name="Initial User Identity {{ $i }}">CN={{ $release }}-{{ $chart }}-{{ $i }}.{{ $release }}-{{ $chart }}-headless.{{ $namespace }}.svc.cluster.local, OU=NIFI</property>
+        <property name="Initial User Identity {{ $i }}">CN={{ $release }}-{{ $i }}.{{ $release }}-headless.{{ $namespace }}.svc.cluster.local, OU=NIFI</property>
 {{- end }}
         <property name="Initial User Identity admin">CN=admin, OU=NIFI</property>
     </userGroupProvider>
