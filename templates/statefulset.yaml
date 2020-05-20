@@ -118,8 +118,8 @@ spec:
         
 {{- if .Values.properties.httpsPort }}
           echo "criando keystore..."
-          ${NIFI_BASE_DIR}/nifi-toolkit-current/bin/tls-toolkit.sh standalone -n ${FQDN} -C 'CN=${FQDN}, OU=NIFI' -C 'CN=admin, OU=NIFI' -o ${NIFI_BASE_DIR}/data/cert/ -P nifi -S nifi --nifiPropertiesFile ${NIFI_HOME}/conf/nifi.properties
-          mv ${NIFI_BASE_DIR}/data/cert/${FQDN}/* ${NIFI_HOME}/conf/
+          ${NIFI_BASE_DIR}/nifi-toolkit-current/bin/tls-toolkit.sh standalone -n ${FQDN} -C 'CN=${FQDN}, OU=NIFI' -C 'CN=admin, OU=NIFI' -o ${NIFI_BASE_DIR}/data/my-cert/ -P nifi -S nifi --nifiPropertiesFile ${NIFI_HOME}/conf/nifi.properties
+          mv ${NIFI_BASE_DIR}/data/my-cert/${FQDN}/* ${NIFI_HOME}/conf/
           echo "keystore criada."
 {{- end }}
 
