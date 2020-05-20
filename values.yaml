@@ -20,6 +20,11 @@ securityContext:
   runAsUser: 1000
   fsGroup: 1000
 
+openid:
+  url: 
+  clientId: 
+  secret: 
+
 sts:
   # Parallel podManagementPolicy for faster bootstrap and teardown. Default is OrderedReady.
   podManagementPolicy: Parallel
