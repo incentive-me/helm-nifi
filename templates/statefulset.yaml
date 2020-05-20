@@ -118,7 +118,7 @@ spec:
         
 {{- if .Values.properties.httpsPort }}
           echo "criando keystore..."
-          ${NIFI_BASE_DIR}/nifi-toolkit-current/bin/tls-toolkit.sh standalone -n ${FQDN} -C 'CN=${FQDN}, OU=NIFI' -C 'CN=admin, OU=NIFI' -o ${NIFI_BASE_DIR}/data/my-cert/ -P nifi -S nifi --nifiPropertiesFile ${NIFI_HOME}/conf/nifi.properties
+          ${NIFI_BASE_DIR}/nifi-toolkit-current/bin/tls-toolkit.sh standalone -n ${FQDN} -C 'CN=admin, OU=NIFI' -C 'CN=localhost, OU=NIFI' -o ${NIFI_BASE_DIR}/data/my-cert/ -P nifi -S nifi --nifiPropertiesFile ${NIFI_HOME}/conf/nifi.properties
           mv ${NIFI_BASE_DIR}/data/my-cert/${FQDN}/* ${NIFI_HOME}/conf/
           echo "keystore criada."
 {{- end }}
@@ -178,8 +178,8 @@ spec:
             - |
 {{- if .Values.properties.httpsPort }}
               curl -kv \
-                --cert ${NIFI_BASE_DIR}/data/cert/nifi-cert.pem --cert-type PEM \
-                --key ${NIFI_BASE_DIR}/data/cert/nifi-key.key --key-type PEM \
+                --cert ${NIFI_BASE_DIR}/data/my-cert/nifi-cert.pem --cert-type PEM \
+                --key ${NIFI_BASE_DIR}/data/my-cert/nifi-key.key --key-type PEM \
                 https://$(hostname -f):9443/nifi-api/controller/cluster > $NIFI_BASE_DIR/data/cluster.state
 {{- else }}
               curl -kv \
