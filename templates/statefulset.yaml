@@ -185,9 +185,15 @@ spec:
               curl -kv \
                 http://$(hostname -f):{{ .Values.properties.httpPort }}/nifi-api/controller/cluster > $NIFI_BASE_DIR/data/cluster.state
 {{- end }}
+
+              OTHER_CHECK=false
+              if [[ $(cat $NIFI_BASE_DIR/data/cluster.state) = "Only a node connected to a cluster can process the request." ]]; then
+                OTHER_CHECK=true
+              fi
               STATUS=$(jq -r ".cluster.nodes[] | select((.address==\"$(hostname -f)\") or .address==\"localhost\") | .status" $NIFI_BASE_DIR/data/cluster.state)
 
-              if [[ ! $STATUS = "CONNECTED" ]]; then
+
+              if [[ ! $STATUS = "CONNECTED" ]] && [[  $OTHER_CHECK = "false" ]]; then
                 echo "Node not found with CONNECTED state. Full cluster state:"
                 jq . $NIFI_BASE_DIR/data/cluster.state
                 exit 1
