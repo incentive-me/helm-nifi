@@ -180,14 +180,14 @@ spec:
               curl -kv \
                 --cert ${NIFI_BASE_DIR}/data/my-cert/nifi-cert.pem --cert-type PEM \
                 --key ${NIFI_BASE_DIR}/data/my-cert/nifi-key.key --key-type PEM \
-                https://$(hostname -f):9443/nifi-api/controller/cluster > $NIFI_BASE_DIR/data/cluster.state
+                https://$(hostname -f):{{ .Values.properties.httpsPort }}/nifi-api/controller/cluster > $NIFI_BASE_DIR/data/cluster.state
 {{- else }}
               curl -kv \
                 http://$(hostname -f):{{ .Values.properties.httpPort }}/nifi-api/controller/cluster > $NIFI_BASE_DIR/data/cluster.state
 {{- end }}
 
               OTHER_CHECK=false
-              if [[ $(cat $NIFI_BASE_DIR/data/cluster.state) = "Only a node connected to a cluster can process the request." ]]; then
+              if [[ $(cat $NIFI_BASE_DIR/data/cluster.state) = "Only a node connected to a cluster can process the request." ]] || [[ $(cat $NIFI_BASE_DIR/data/cluster.state) = "Unknown user with identity 'CN=admin, OU=NIFI'. Contact the system administrator." ]]; then
                 OTHER_CHECK=true
               fi
               STATUS=$(jq -r ".cluster.nodes[] | select((.address==\"$(hostname -f)\") or .address==\"localhost\") | .status" $NIFI_BASE_DIR/data/cluster.state)

@@ -51,6 +51,7 @@ sts:
 
 properties:
   # use externalSecure for when inbound SSL is provided by nginx-ingress or other external mechanism
+  identityAdmin: 'CN=admin, OU=NIFI'
   externalSecure: false
   isNode: true
   httpPort: 8080
