@@ -2,6 +2,10 @@
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "apache-nifi.fullname" . -}}
 {{- $ingressPath := .Values.ingress.path -}}
+{{- $ingressPort := .Values.service.httpPort -}}
+{{- if .Values.properties.clusterSecure }}
+{{- $ingressPort := .Values.service.httpsPort -}}
+{{- end }}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -35,10 +39,6 @@ spec:
           - path: {{ $ingressPath }}
             backend:
               serviceName: {{ $fullName }}
-    {{- if .Values.properties.clusterSecure }}
-              servicePort: {{ .Values.service.httpsPort }}
-    {{- else }}
-              servicePort: {{ .Values.service.httpPort }}
-    {{- end }}
+              servicePort: {{ $ingressPort }}
   {{- end }}
 {{- end }}
