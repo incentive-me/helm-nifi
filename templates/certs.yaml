@@ -1,0 +1,52 @@
+{{- $release := .Release.Name }}
+{{- $namespace := .Release.Namespace }}
+{{- if .Values.properties.httpsPort }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: certs
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "1"
+spec:
+  accessModes:
+    - ReadWriteOnce
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: certs-creator
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "2"
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: deployer
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: IfNotPresent
+        command:
+        - bash
+        - -ce
+        - |
+          echo "criando keystore..."
+          ${NIFI_BASE_DIR}/nifi-toolkit-current/bin/tls-toolkit.sh standalone -c {{.Values.properties.identityAdmin.name}} -n {{ $release }}-[0-10].{{ $release }}-headless.{{ $namespace }}.svc.cluster.local --nifiDnSuffix ', OU={{.Values.properties.identityAdmin.domain}}' -o ${NIFI_BASE_DIR}/certs/ -P nifi -S nifi -O
+          echo "keystore criada."
+        volumeMounts:
+        - mountPath: /opt/nifi/certs
+          name: certs
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: certs
+        persistentVolumeClaim:
+          claimName: certs
+{{- end }}

@@ -64,6 +64,20 @@ spec:
 {{ toYaml .Values.securityContext | indent 8 }}
 {{- end }}
       initContainers:
+      - name: init-certs
+        image: busybox
+        volumeMounts:
+          - name: "certs"
+            mountPath: /certs
+            readOnly: true
+          - name: "data"
+            mountPath: /data
+        command:
+        - sh
+        - -c
+        - |
+          mkdir /data/certs
+          cp -R /certs/* /data/certs
       - name: zookeeper
         image: busybox
         command:
@@ -114,13 +128,15 @@ spec:
           prop_replace nifi.remote.input.host ${FQDN}
           prop_replace nifi.cluster.node.address ${FQDN}
           prop_replace nifi.web.http.host ${FQDN}
+          prop_replace nifi.web.https.host ${FQDN}
           prop_replace nifi.zookeeper.connect.string ${NIFI_ZOOKEEPER_CONNECT_STRING}
         
 {{- if .Values.properties.httpsPort }}
-          echo "criando keystore..."
-          ${NIFI_BASE_DIR}/nifi-toolkit-current/bin/tls-toolkit.sh standalone -c admin -n ${FQDN} -C 'CN=admin, OU=NIFI' -o ${NIFI_BASE_DIR}/data/my-cert/ -P nifi -S nifi --nifiPropertiesFile ${NIFI_HOME}/conf/nifi.properties -O
-          mv ${NIFI_BASE_DIR}/data/my-cert/${FQDN}/* ${NIFI_HOME}/conf/
-          echo "keystore criada."
+          prop_replace nifi.security.keystore ../data/certs/${FQDN}/keystore.jks
+          prop_replace nifi.security.keystorePasswd nifi
+          prop_replace nifi.security.keyPasswd nifi
+          prop_replace nifi.security.truststore ../data/certs/${FQDN}/truststore.jks
+          prop_replace nifi.security.truststorePasswd nifi
 {{- end }}
 
 {{- if .Values.properties.safetyValve }}
@@ -178,22 +194,16 @@ spec:
             - |
 {{- if .Values.properties.httpsPort }}
               curl -kv \
-                --cert ${NIFI_BASE_DIR}/data/my-cert/nifi-cert.pem --cert-type PEM \
-                --key ${NIFI_BASE_DIR}/data/my-cert/nifi-key.key --key-type PEM \
+                --cert ${NIFI_BASE_DIR}/data/certs/nifi-cert.pem --cert-type PEM \
+                --key ${NIFI_BASE_DIR}/data/certs/nifi-key.key --key-type PEM \
                 https://$(hostname -f):{{ .Values.properties.httpsPort }}/nifi-api/controller/cluster > $NIFI_BASE_DIR/data/cluster.state
 {{- else }}
               curl -kv \
                 http://$(hostname -f):{{ .Values.properties.httpPort }}/nifi-api/controller/cluster > $NIFI_BASE_DIR/data/cluster.state
 {{- end }}
-
-              OTHER_CHECK=false
-              if [[ $(cat $NIFI_BASE_DIR/data/cluster.state) = "Only a node connected to a cluster can process the request." ]] || [[ $(cat $NIFI_BASE_DIR/data/cluster.state) = "Unknown user with identity 'CN=admin, OU=NIFI'. Contact the system administrator." ]]; then
-                OTHER_CHECK=true
-              fi
               STATUS=$(jq -r ".cluster.nodes[] | select((.address==\"$(hostname -f)\") or .address==\"localhost\") | .status" $NIFI_BASE_DIR/data/cluster.state)
 
-
-              if [[ ! $STATUS = "CONNECTED" ]] && [[  $OTHER_CHECK = "false" ]]; then
+              if [[ ! $STATUS = "CONNECTED" ]]; then
                 echo "Node not found with CONNECTED state. Full cluster state:"
                 jq . $NIFI_BASE_DIR/data/cluster.state
                 exit 1
@@ -305,6 +315,10 @@ spec:
         - name: logs
           mountPath: /var/log
       volumes:
+      - name: certs
+        persistentVolumeClaim:
+          claimName: certs
+          readOnly: true
       - name: "bootstrap-conf"
         configMap:
           name: {{ template "apache-nifi.fullname" . }}-config
