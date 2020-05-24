@@ -48,10 +48,10 @@
         <class>org.apache.nifi.authorization.FileUserGroupProvider</class>
         <property name="Users File">../data/users.xml</property>
         <property name="Legacy Authorized Users File"></property>
+        <property name="Initial User Identity A">{{ $identityName }}@{{ $identityDomain }}</property>
 {{- range $i := until $replicas }}
         <property name="Initial User Identity {{ $i }}">{{ $release }}-{{ $i }}.{{ $release }}-headless.{{ $namespace }}.svc.cluster.local@{{ $identityDomain }}</property>
 {{- end }}
-        <property name="Initial User Identity admin">{{ $identityName }}@{{ $identityDomain }}</property>
     </userGroupProvider>
     <!--
         The LdapUserGroupProvider will retrieve users and groups from an LDAP server. The users and groups
@@ -224,6 +224,7 @@
 {{- range $i := until $replicas }}
         <property name="Node Identity {{ $i }}">{{ $release }}-{{ $i }}.{{ $release }}-headless.{{ $namespace }}.svc.cluster.local@{{ $identityDomain }}</property>
 {{- end }}
+        <property name="Node Group"></property>
     </accessPolicyProvider>
      <!--
         The StandardManagedAuthorizer. This authorizer implementation must be configured with the

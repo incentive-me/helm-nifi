@@ -64,20 +64,6 @@ spec:
 {{ toYaml .Values.securityContext | indent 8 }}
 {{- end }}
       initContainers:
-      - name: init-certs
-        image: busybox
-        volumeMounts:
-          - name: "certs"
-            mountPath: /certs
-            readOnly: true
-          - name: "data"
-            mountPath: /data
-        command:
-        - sh
-        - -c
-        - |
-          mkdir /data/certs
-          cp -R /certs/* /data/certs
       - name: zookeeper
         image: busybox
         command:
@@ -315,10 +301,6 @@ spec:
         - name: logs
           mountPath: /var/log
       volumes:
-      - name: certs
-        persistentVolumeClaim:
-          claimName: certs
-          readOnly: true
       - name: "bootstrap-conf"
         configMap:
           name: {{ template "apache-nifi.fullname" . }}-config

@@ -1,28 +1,58 @@
+{{- $replicas := int .Values.replicaCount }}
 {{- $release := .Release.Name }}
 {{- $namespace := .Release.Namespace }}
+{{- $storageClass := .Values.persistence.storageClass }}
+{{- $storageClass := .Values.persistence.storageClass }}
+{{- $size := .Values.persistence.dataStorage.size }}
+{{- $accessModes := .Values.persistence.accessModes }}
+{{- if .Values.properties.createVolumes }}
 {{- if .Values.properties.httpsPort }}
-kind: PersistentVolumeClaim
+# kind: PersistentVolumeClaim
+# apiVersion: v1
+# metadata:
+#   name: certs
+#   annotations:
+#     "helm.sh/hook": pre-install
+#     "helm.sh/hook-weight": "1"
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#     - ReadOnlyMany
+#   resources:
+#     requests:
+#       storage: 1Gi
+# ---
+{{- range $i := until $replicas }}
 apiVersion: v1
+kind: PersistentVolume
 metadata:
-  name: certs
+  name: data-{{ $release }}-{{ $i }}
   annotations:
     "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-weight": "2"
 spec:
+  storageClassName: {{ $storageClass | quote }}
+  capacity:
+    storage: {{ $size }}
+  gcePersistentDisk:
+    pdName: data-{{ $release }}-{{ $i }}
+    fsType: ext4
+  claimRef:
+    namespace: {{ $namespace }}
+    name: data-{{ $release }}-{{ $i }}
   accessModes:
-    - ReadWriteOnce
-    - ReadOnlyMany
-  resources:
-    requests:
-      storage: 1Gi
+  {{- range $accessModes }}
+    - {{ . }}
+  {{- end }}
 ---
+{{- end }}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: certs-creator
   annotations:
     "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "2"
+    "helm.sh/hook-weight": "3"
 spec:
   template:
     spec:
@@ -39,14 +69,25 @@ spec:
         - |
           echo "criando keystore..."
           ${NIFI_BASE_DIR}/nifi-toolkit-current/bin/tls-toolkit.sh standalone -c {{.Values.properties.identityAdmin.name}} -n {{ $release }}-[0-10].{{ $release }}-headless.{{ $namespace }}.svc.cluster.local --nifiDnSuffix ', OU={{.Values.properties.identityAdmin.domain}}' -o ${NIFI_BASE_DIR}/certs/ -P nifi -S nifi -O
+{{- range $i := until $replicas }}
+          echo "copiando {{ $release }}..."
+          mkdir /data-{{ $release }}-{{ $i }}/certs
+          cp -R ${NIFI_BASE_DIR}/certs/* /data-{{ $release }}-{{ $i }}/certs
+{{- end }}
           echo "keystore criada."
         volumeMounts:
-        - mountPath: /opt/nifi/certs
-          name: certs
+{{- range $i := until $replicas }}
+        - mountPath: /data-{{ $release }}-{{ $i }}
+          name: data-{{ $release }}-{{ $i }}
+{{- end }}
       restartPolicy: Never
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: certs
-        persistentVolumeClaim:
-          claimName: certs
+{{- range $i := until $replicas }}
+      - name: data-{{ $release }}-{{ $i }}
+        gcePersistentDisk:
+          pdName: data-{{ $release }}-{{ $i }}
+          fsType: ext4
+{{- end }}
+{{- end }}
 {{- end }}
